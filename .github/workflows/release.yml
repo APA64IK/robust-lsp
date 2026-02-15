@@ -37,7 +37,6 @@ jobs:
               uses: nicolaiunrein/cargo-get@master
               with:
                 subcommand: package.version
-            
             - name: Rename artifact (windows)
               if: matrix.os == 'windows-latest'
               run: mv target/release/robust-lsp.exe target/release/${{ matrix.file }}
@@ -45,12 +44,27 @@ jobs:
             - name: Rename artifact (linux)
               if: matrix.os == 'ubuntu-latest'
               run: mv target/release/robust-lsp target/release/${{ matrix.file }}
-
+            - name: Setup node
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20
+            - name: Install dependencies
+              run: npm ci
+              working-directory: clients/code
+            - name: Build extension
+              run: npm run compile
+              working-directory: clients/code
+            - name: Install vsce
+              run: npm install -g @vscode/vsce
+            - name: Package extension
+              run: vsce package
+              working-directory: clients/code
             - name: Upload artifact
               uses: softprops/action-gh-release@v1
               with:
                   tag_name: v${{ steps.cargo-get.outputs.metadata }}
                   files: |
                       target/release/${{ matrix.file }}
+                      clients/code/*.vsix
               env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
